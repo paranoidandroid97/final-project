@@ -26,12 +26,19 @@ def play():
         pygame.mixer.music.load(songs[0])
         pygame.mixer.music.play()
 
+def stop():
+    pygame.mixer.music.stop()
+
+
 # Buttons
 btn_choose = tk.Button(root, text="Choose Folder", command=choose_folder)
 btn_choose.pack(pady=20)
 
 btn_play = tk.Button(root, text="Play First Song", command=play)
 btn_play.pack(pady=10)
+
+btn_stop = tk.Button(root, text="Stop", command=stop)
+btn_stop.pack(pady=10)
 
 
 # still working on stuff below:
