@@ -1,100 +1,104 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, PhotoImage
 import pygame
 import os
 
 # Initialize pygame mixer
 pygame.mixer.init()
 
+# Global state
 current_song_index = 0
 playlist = []
 is_paused = False
+current_song = None
 
+# --- Music control functions ---
 def choose_folder():
     global playlist, current_song_index
     folder_selected = filedialog.askdirectory()
     if folder_selected:
         playlist = [os.path.join(folder_selected, f) for f in os.listdir(folder_selected) if f.endswith(".mp3")]
+        playlist.sort()
         current_song_index = 0
         if playlist:
-            play_song()
+            load_song()
 
-def play_song():
-    global is_paused
+def load_song():
+    global current_song, is_paused
+    current_song = playlist[current_song_index]
+    pygame.mixer.music.load(current_song)
+    display_var.set(f"Loaded:\n{os.path.basename(current_song)}")
     is_paused = False
-    pygame.mixer.music.load(playlist[current_song_index])
-    pygame.mixer.music.play()
-    update_display()
 
-def toggle_play_pause():
+def play_pause():
     global is_paused
     if not playlist:
         return
     if is_paused:
         pygame.mixer.music.unpause()
+        display_var.set(f"▶ {os.path.basename(current_song)}")
         is_paused = False
     else:
-        pygame.mixer.music.pause()
-        is_paused = True
-    update_display()
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.pause()
+            display_var.set(f"⏸ {os.path.basename(current_song)}")
+        else:
+            pygame.mixer.music.play()
+            display_var.set(f"▶ {os.path.basename(current_song)}")
+        is_paused = not is_paused
 
 def next_song():
     global current_song_index
     if playlist:
         current_song_index = (current_song_index + 1) % len(playlist)
-        play_song()
+        load_song()
+        pygame.mixer.music.play()
+        display_var.set(f"▶ {os.path.basename(current_song)}")
 
 def prev_song():
     global current_song_index
     if playlist:
         current_song_index = (current_song_index - 1) % len(playlist)
-        play_song()
+        load_song()
+        pygame.mixer.music.play()
+        display_var.set(f"▶ {os.path.basename(current_song)}")
 
-def update_display():
-    if playlist:
-        song_name = os.path.basename(playlist[current_song_index])
-        if is_paused:
-            display_var.set(f"⏸ {song_name}")
-        else:
-            display_var.set(f"▶ {song_name}")
-    else:
-        display_var.set("No song playing")
-
-# Create main window
+# --- GUI setup ---
 root = tk.Tk()
-root.title("iPod MP3 Player")
-root.configure(bg="black")
+root.title("iPod Player")
+root.geometry("390x642")
+root.resizable(False, False)
 
-# Screen
+# Background image
+bg_image = PhotoImage(file="ipod_background.png")
+bg_label = tk.Label(root, image=bg_image)
+bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+
+# Screen area
 display_var = tk.StringVar()
-display_label = tk.Label(root, textvariable=display_var, width=30, height=4,
-                         bg="lightgrey", fg="white", font=("Courier", 14), relief="sunken", anchor="center")
-display_label.grid(row=0, column=0, columnspan=3, pady=10)
-update_display()
+display_label = tk.Label(
+    root,
+    textvariable=display_var,
+    font=("Courier", 14, "bold"),
+    fg="white",
+    bg="black",
+    anchor="n"
+)
+display_label.place(x=33, y=31, width=324, height=245)
+display_var.set("No song playing")
 
-# Buttons — arranged in iPod wheel layout
-btn_style = {"width": 6, "height": 2, "bg": "white", "fg": "black", "font": ("Arial", 12)}
+# Buttons positioned like iPod
+menu_btn = tk.Button(root, text="MENU", command=choose_folder)
+menu_btn.place(x=164, y=362, width=50, height=29)
 
-# Top (Choose Folder / Menu)
-choose_btn = tk.Button(root, text="Choose\nFolder", command=choose_folder, **btn_style)
-choose_btn.grid(row=1, column=1, pady=5)
+prev_btn = tk.Button(root, text="⏪", command=prev_song)
+prev_btn.place(x=82, y=453, width=50, height=29)
 
-# Left (Previous)
-prev_btn = tk.Button(root, text="⏮", command=prev_song, **btn_style)
-prev_btn.grid(row=2, column=0, padx=5)
+next_btn = tk.Button(root, text="⏩", command=next_song)
+next_btn.place(x=245, y=453, width=50, height=29)
 
-# Right (Next)
-next_btn = tk.Button(root, text="⏭", command=next_song, **btn_style)
-next_btn.grid(row=2, column=2, padx=5)
+play_pause_btn = tk.Button(root, text="▶️⏸", command=play_pause)
+play_pause_btn.place(x=164, y=545, width=50, height=29)
 
-# Bottom (Play/Pause)
-play_pause_btn = tk.Button(root, text="▶ / ⏸", command=toggle_play_pause, **btn_style)
-play_pause_btn.grid(row=3, column=1, pady=5)
-
-# Center empty space to simulate wheel feel
-root.grid_rowconfigure(2, minsize=70)
-root.grid_columnconfigure(1, minsize=100)
-
-# coming soon: choosing song from tracklist on screen; better screen size/layout; background so it looks like an iPod etc.
-
+# Run app
 root.mainloop()
